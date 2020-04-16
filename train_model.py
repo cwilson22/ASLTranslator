@@ -35,4 +35,4 @@ for i in image:
     fig.add_subplot(3,4, counter)
     plt.imshow(i)
     counter+=1
-plt.show()6
+plt.show()

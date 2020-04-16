@@ -9,8 +9,10 @@ counter = 0
 #dimension x dimension is the size of the training set we are using, we may want to shrink or grow this for performance reasons in the future
 dimension = 200
 
+#note that the code saves directly into a directory that is called sign, so make sure to make that folder before running
 #Set sign that you are creating for data currently
 sign = "q"
+image_name = "q"
 
 cap.set(3, 480)  # set Width = 300
 cap.set(4, 360)  # set Height = 300
@@ -20,6 +22,11 @@ print(width)
 height = cap.get(4)
 print(height)
 save = False
+
+def pad(src, amount = 12):
+    #My training data is 200x200, resnet needs 224, so I pad with 12 on each side, constant border, and white
+    return cv2.copyMakeBorder(src, amount, amount, amount, amount, cv.BORDERCONSTANT,None, [255,255,255])
+
 
 while (True):
     ret, frame = cap.read()
@@ -35,16 +42,16 @@ while (True):
 
     pressed = cv2.waitKey(1)
     if save == True:
-        path = "./data/%s/%s%d.jpg" % (sign,sign,counter)
+        path = "./data/%s/%s%d.jpg" % (sign,image_name,counter)
         print(path)
         counter += 1
         out = cv2.imwrite(path, croppedFrame)
 
-    if(pressed & 0xFF == ord(' ')):
+    if(pressed & 0xFF == ord(' ')): #When you press save it starts saving each frame
         save = True
-    elif (pressed & 0xFF == 101):
+    elif (pressed & 0xFF == 101): #When you press e it stops saving each frame
         save = False
-    elif(pressed & 0XFF == 27):
+    elif(pressed & 0XFF == 27): #Pressing escape closes the window
         break
 
 
