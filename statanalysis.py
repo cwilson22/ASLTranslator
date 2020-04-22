@@ -1,27 +1,35 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot(hist):
-    vhist = [h.cpu().numpy() for h in hist]
+def plot(val_acc_hist, val_loss_hist, train_acc_hist, train_loss_hist):
+    # vahist = [a.cpu().numpy() for a in val_acc_hist]
+    # vlhist = [l.cpu().numpy() for l in val_loss_hist]
+    # tahist = [a.cpu().numpy() for a in train_acc_hist]
+    # tlhist = [l.cpu().numpy() for l in train_loss_hist]
+
+    vahist = [a for a in val_acc_hist]
+    vlhist = [l for l in val_loss_hist]
+    tahist = [a for a in train_acc_hist]
+    tlhist = [l for l in train_loss_hist]
+
+    plt.figure()
     plt.title("Validation Accuracy vs. Number of Training Epochs")
     plt.xlabel("Training Epochs")
     plt.ylabel("Validation Accuracy")
-    plt.plot(range(1,len(vhist)),vhist,label="Validation")
-    plt.ylin((0,1.))
-    plt.xticks(np.arange(1, len(vhist)+1,1.0))
+    plt.plot(range(1,len(vahist)+1),vahist,label="Validation")
+    plt.plot(range(1,len(tahist)+1),tahist,label="Training")
+    plt.ylim((0,1.))
+    plt.xticks(np.arange(1, len(vahist)+1,1.0))
+    plt.legend()
+    #plt.show()
+    plt.figure()
+    plt.title("Validation Loss vs. Number of Training Epochs")
+    plt.xlabel("Training Epochs")
+    plt.ylabel("Validation Loss")
+    plt.plot(range(1,len(vlhist)+1), vlhist, label="Validation")
+    plt.plot(range(1,len(tlhist)+1), tlhist, label="Training")
+    plt.ylim((0,1.))
+    plt.xticks(np.arange(1, len(vlhist)+1,1.0))
     plt.legend()
     plt.show()
 
-
-# vhist = [0.9568,0.9695,0.9686,0.9736,0.9770,0.9819,0.9751,0.9828,0.9767,0.9814,0.9815,0.9824,0.9841,0.9846,0.9826]
-# thist = [0.7905,0.8955,0.9073,0.9144,0.9244,0.9250,0.9281,0.9308,0.9333,0.9357,0.9347,0.9367,0.9390,0.9394,0.9388]
-#
-# plt.title("Validation Accuracy vs. Number of Training Epochs")
-# plt.xlabel("Training Epochs")
-# plt.ylabel("Validation Accuracy")
-# plt.plot(range(1,len(vhist)+1),vhist,label="Validation")
-# plt.plot(range(1,len(thist)+1),thist,label="Training")
-# plt.ylim((0,1.))
-# plt.xticks(np.arange(1, len(thist)+1,1.0))
-# plt.legend()
-# plt.show()
