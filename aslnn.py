@@ -34,6 +34,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     since = time.time()
 
     val_acc_history = []
+    val_loss_history = []
+    train_acc_history = []
+    train_loss_history = []
 
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
@@ -93,6 +96,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 best_model_wts = copy.deepcopy(model.state_dict())
             if phase == 'val':
                 val_acc_history.append(epoch_acc)
+                val_loss_history.append(epoch_loss)
+            if phase == 'train':
+                train_acc_history.append(epoch_acc)
+                train_loss_history.append(epoch_loss)
 
         print()
 
@@ -101,7 +108,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     print('Best val Acc: {:4f}'.format(best_acc))
 
     model.load_state_dict(best_model_wts)
-    return model, val_acc_history
+    return model, val_acc_history, val_loss_history, train_acc_history, train_loss_history
 
 def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
@@ -171,12 +178,7 @@ optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum = 0.9)
 
 criterion = nn.CrossEntropyLoss()
 
-#print(dataloaders_dict['train'])
-# for a in dataloaders_dict['train']:
-#     print(a)
-# for inputs, labels in dataloaders_dict['train']:
-#     print(inputs, labels)
-# print(dataloaders_dict['val'])
-model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=(model_name=="inception"))
-statanalysis.plot(hist)
-torch.save(model_ft.state_dict(),'resnet_weight.pt')
+
+model_ft, val_acc_hist, val_loss_hist, train_acc_hist, train_loss_hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=(model_name=="inception"))
+statanalysis.plot(val_acc_hist, val_loss_hist, train_acc_hist, train_loss_hist)
+torch.save(model_ft.state_dict(),'resnet_weight_5_epochs.pt')
