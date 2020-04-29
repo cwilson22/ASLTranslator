@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 import cv2
 import csv
 
+
 class EgohandsDataset(Dataset):
     def __init__(self, transforms):
         #self.root = root
@@ -32,16 +33,22 @@ class EgohandsDataset(Dataset):
 
         img = Image.open(img_path).convert('RGB')
         mask = Image.open(mask_path)
+        #print(mask_path)
         mask = np.array(mask)
         #obj_ids = np.unique(mask)
         obj_ids = np.unique(mask.reshape(-1,mask.shape[2]),axis=0)
         obj_ids = obj_ids[1:]
+        #print(obj_ids.shape)
+        masks = (mask == obj_ids[:, None, None])[:,:,:,0]
+        #this is 3 channels for some reason when it should be 1 channel so NxHxWxC -> NxHxW
 
-        masks = mask == obj_ids[:, None, None]
-
+        #print(masks.shape)
+        #print(masks[0][570][500])
+        #print(obj_ids)
         num_objs = len(obj_ids)
         boxes = []
         for i in range(num_objs):
+            #pos = np.where(np.all(mask == obj_ids[i]))
             pos = np.where(masks[i])
             xmin = np.min(pos[1])
             xmax = np.max(pos[1])
@@ -53,9 +60,10 @@ class EgohandsDataset(Dataset):
         labels = torch.ones((num_objs,), dtype=torch.int64)
         masks = torch.as_tensor(masks, dtype=torch.uint8)
         image_id = torch.tensor([idx])
+        #print(boxes)
+        #print('area: {} - {} * {} - {}'.format(boxes[:, 3], boxes[:, 1], boxes[:, 2], boxes[:, 0]))
         area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
         iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
-
         target = {}
         target['boxes'] = boxes
         target['labels'] = labels

@@ -103,35 +103,32 @@ for root, dirs, filenames in os.walk('./egohands_data/_LABELLED_SAMPLES/'):
         #cv2.imshow('verify annotation', img)
         print('counter: {}'.format(counter))
         #cv2.waitKey(0)
-
-        cv2.imwrite('./egohands_processed/images/image{}.png'.format(counter),raw_img)
-        cv2.imwrite('./egohands_processed/masks/mask{}.png'.format(counter),mask)
-        #boundary_box = [min_x, min_y, max_x, max_y]
-        #label = 1
-        boundary_boxes = boxarray
-        #May have to give each a label for now I'll just give them all 1 since rcnn is instance segmentation
-        #that being said I only have one class so it should be okay
-        labels = np.ones(len(boxarray))
-        image_id = counter
-        area = (max_x-min_x+1)*(max_y-min_y+1)
-        iscrowd = False
-
-
-        #   BOUNDINGBOX, LABEL=1, IMAGE_ID, BOUNDINGBOX_AREA, ISCROWD=False
-        #   "###,###,###,### 1 0 12204 False"
-        with open('./egohands_processed/annotations/annotation{}.txt'.format(counter),'w',newline='') as csvfile:
-            writer = csv.writer(csvfile,delimiter=',')
-            for b in range(0,len(boundary_boxes)):
-                #output = 'boundary_box' + ' ' + \
-                output = str(boundary_boxes[b]['min_x']) + ',' +\
-                         str(boundary_boxes[b]['min_y']) + ',' +\
-                         str(boundary_boxes[b]['max_x']) + ',' +\
-                         str(boundary_boxes[b]['max_y'])
-                output += ' ' + str(1)
-                output += ' ' + str(image_id)
-                output += ' ' + str((boundary_boxes[b]['max_x']-boundary_boxes[b]['min_x'])*(boundary_boxes[b]['max_y']-boundary_boxes[b]['min_y']))
-                output += ' ' + str(iscrowd)
-                writer.writerow([output])
-
-
-        counter += 1
+        #there are frames with no hands so we need to filter those out
+        if np.any(mask):
+            cv2.imwrite('./egohands_processed/images/image{}.png'.format(counter),raw_img)
+            cv2.imwrite('./egohands_processed/masks/mask{}.png'.format(counter),mask)
+            #boundary_box = [min_x, min_y, max_x, max_y]
+            #label = 1
+            boundary_boxes = boxarray
+            #May have to give each a label for now I'll just give them all 1 since rcnn is instance segmentation
+            #that being said I only have one class so it should be okay
+            labels = np.ones(len(boxarray))
+            image_id = counter
+            area = (max_x-min_x+1)*(max_y-min_y+1)
+            iscrowd = False
+            #   BOUNDINGBOX, LABEL=1, IMAGE_ID, BOUNDINGBOX_AREA, ISCROWD=False
+            #   "###,###,###,### 1 0 12204 False"
+            with open('./egohands_processed/annotations/annotation{}.txt'.format(counter),'w',newline='') as csvfile:
+                writer = csv.writer(csvfile,delimiter=',')
+                for b in range(0,len(boundary_boxes)):
+                    #output = 'boundary_box' + ' ' + \
+                    output = str(boundary_boxes[b]['min_x']) + ',' +\
+                             str(boundary_boxes[b]['min_y']) + ',' +\
+                             str(boundary_boxes[b]['max_x']) + ',' +\
+                             str(boundary_boxes[b]['max_y'])
+                    output += ' ' + str(1)
+                    output += ' ' + str(image_id)
+                    output += ' ' + str((boundary_boxes[b]['max_x']-boundary_boxes[b]['min_x'])*(boundary_boxes[b]['max_y']-boundary_boxes[b]['min_y']))
+                    output += ' ' + str(iscrowd)
+                    writer.writerow([output])
+            counter += 1

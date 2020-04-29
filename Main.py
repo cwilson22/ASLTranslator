@@ -11,6 +11,12 @@ from PIL import Image
 from skimage import io
 from torch.utils.data import Dataset, DataLoader
 from TestDataset import TestDataset
+import matplotlib.pyplot as plt
+
+
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+from LocalizationDataset import LocalizationDataset
 
 if __name__ == '__main__':
     print("Hello, World")
@@ -41,18 +47,28 @@ if __name__ == '__main__':
     model.fc = torch.nn.Linear(num_ftrs, 26)
     input_size = 224
 
-    #model.load_state_dict(torch.load('resnet_weight.pt'))
-    #model_dict = torch.load('resnet_weight.pt')]
     model.load_state_dict(torch.load('resnet_weight.pt'))
-
     model.eval()
 
-    #print(model)
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    #Localization
+    local_model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained = True)
+    in_features = local_model.roi_heads.box_predictor.cls_score.in_features
+    local_model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 2)
+    in_features_mask = local_model.roi_heads.mask_predictor.conv5_mask.in_channels
+    hidden_layer = 256
+    local_model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, 2)
+    local_model.load_state_dict(torch.load('rcnn_weight_10_epochs.pt'))
+    local_model.eval()
 
     last = time.time()
-
+    lastbox = time.time()
     #This displays on the screen what the predicted sign is
     sign = 'DEFAULT'
+    left_bounds = []
+    right_bounds = []
+    top_bounds = []
+    bottom_bounds = []
     while(True):
         ret, frame = cap.read()
 
@@ -63,10 +79,37 @@ if __name__ == '__main__':
         bottom_bound = top_bound + dimension
         croppedFrame = frame[top_bound:bottom_bound, left_bound:right_bound]  # x and y are flipped idk why
 
+
+        if time.time()-lastbox > 10:
+            lastbox = time.time()
+            with torch.no_grad():
+                dataset_test = LocalizationDataset(Image.fromarray(frame))
+                img, target = dataset_test[0]
+                prediction = local_model([img])
+                #print(prediction[0]['boxes'])
+                left_bounds = []
+                right_bounds = []
+                top_bounds = []
+                bottom_bounds = []
+                masks = prediction[0]['masks']
+                #Image.fromarray(prediction[0]['masks'][0,0].mul(255).byte().cpu().numpy()).show()
+                for boxes in prediction[0]['boxes']:
+                    left_bounds.append(boxes[0])
+                    right_bounds.append(boxes[2])
+                    top_bounds.append(boxes[1])
+                    bottom_bounds.append(boxes[3])
+                    #print(boxes)
+                    #frame = cv2.rectangle(frame, (boxes[0], boxes[1]), (boxes[2], boxes[3]), (0,255,0), thickness=2, lineType=8, shift=0)
+
         #print('{} to {} out of {}'.format(left_bound, right_bound, bounded_box_width))
         #print('{} to {} out of {}'.format(top_bound, bottom_bound, bounded_box_height))
 
-        frame = cv2.rectangle(frame,(left_bound,top_bound),(right_bound,bottom_bound),0,5,8,0)
+        #frame = cv2.rectangle(frame,(left_bound,top_bound),(right_bound,bottom_bound),0,5,8,0)
+
+        for boxes in range(len(left_bounds)):
+            frame = cv2.rectangle(frame, (left_bounds[boxes], top_bounds[boxes]), (right_bounds[boxes], bottom_bounds[boxes]), (0, 255, 0), thickness=2,
+                                  lineType=8, shift=0)
+
 
         #Gets rid of the info on the bottom bar
         #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
@@ -79,32 +122,13 @@ if __name__ == '__main__':
         if time.time()-last > 1:
             last = time.time()
             input = croppedFrame
-            #input = Image.fromarray(input)
-
-            #input = io.imread('.\\data\\training_images\\combined\\a0.jpg')
 
             dataloader = DataLoader(TestDataset(input), batch_size=1, shuffle=False, num_workers=0)
             for i in dataloader:
                 outputs = model(i)
                 _, preds = torch.max(outputs, 1)
-                print(outputs)
+                #print(outputs)
             sign = signs[preds.int()].upper()
-            # input = cv2.resize(input,dsize=(224,224))
-            # transform = transforms.ToTensor()
-            # input = transform(input)
-            # transform = transforms.Normalize([0.485,0.456,0.406], [0.229, 0.224, 0.225])
-            # input = transform(input)
-
-            #input = torch.from_numpy(input)
-
-            # input = input.unsqueeze(0)
-            # print(input.size())
-            # print(input)
-            # outputs = model(input)
-
-            #print(outputs)
-            #print(preds)
-            #sign = str(torch.max(outputs, 1))
 
     cap.release()
     cv2.destroyAllWindows()
