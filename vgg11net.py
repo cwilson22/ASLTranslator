@@ -5,8 +5,6 @@ import torchvision.models as models
 from torch import nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
-from torch.autograd import Variable
-from torch.utils.data import Dataset, DataLoader
 import vgg11data
 import time
 import os
@@ -78,19 +76,12 @@ def train_model(vgg, criterion1, optimizer, scheduler, num_epochs=10):
         for i, data in enumerate(dataloaders['train']):
             if i % 10 == 0:
                 print("\rTraining batch {}/{}".format(i, train_batches // 2), end='', flush=True)
- 
+
             # Use half training dataset
             if i >= train_batches // 2:
                 break
 
             inputs, labels = data
-
-            """
-            if use_gpu:
-                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-            else:
-                inputs, labels = Variable(inputs), Variable(labels)
-            """
 
             optimizer.zero_grad()
 
@@ -121,13 +112,6 @@ def train_model(vgg, criterion1, optimizer, scheduler, num_epochs=10):
                 print("\rValidation batch {}/{}".format(i, val_batches), end='', flush=True)
 
             inputs, labels = data
-
-            """
-            if use_gpu:
-                inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile=True)
-            else:
-                inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile=True)
-            """
 
             optimizer.zero_grad()
 
