@@ -11,13 +11,18 @@ import os
 import copy
 
 
+#
+# https://www.kaggle.com/pytorch/vgg11bn#vgg11_bn.pth
+# Downloaded above model to folder 'models' in ASLTranslator on local machine
+#
+# Portions of this code were adapted from a Pytorch tutorial on transfer learning,
+# https://www.kaggle.com/carloalbertobarbano/vgg16-transfer-learning-pytorch
+#
+
+
 num_to_letter = ['A', 'B', 'C', 'D', 'del', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'nothing', 'O', 'P', 'Q',
                  'R', 'S', 'space', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 use_gpu = torch.cuda.is_available()
-
-
-# https://www.kaggle.com/pytorch/vgg11bn#vgg11_bn.pth
-# Downloaded above model to folder 'models' in ASLTranslator on local machine
 
 model = models.__dict__['vgg11_bn']()
 model.load_state_dict(torch.load("models/vgg11_bn.pth"))
@@ -26,11 +31,10 @@ for param in model.features.parameters():
     param.require_grad = False
 
 
-# Newly created modules have require_grad=True by default
 num_features = model.classifier[6].in_features
-features = list(model.classifier.children())[:-1] # Remove last layer
-features.extend([nn.Linear(num_features, len(num_to_letter))]) # Add our layer with 4 outputs
-model.classifier = nn.Sequential(*features) # Replace the model classifier
+features = list(model.classifier.children())[:-1]  # Remove last layer
+features.extend([nn.Linear(num_features, len(num_to_letter))])  # Replace with output layer of correct size
+model.classifier = nn.Sequential(*features)
 
 criterion = nn.CrossEntropyLoss()
 optimizer_ft = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
