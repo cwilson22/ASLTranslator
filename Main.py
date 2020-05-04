@@ -69,48 +69,90 @@ if __name__ == '__main__':
     right_bounds = []
     top_bounds = []
     bottom_bounds = []
+
+    capzone_top = 240
+    capzone_bot = 480
+    capzone_left = 460
+    capzone_right = 820
+
     while(True):
-        ret, frame = cap.read()
+        ret, original = cap.read()
 
-
+        frame = copy.deepcopy(original)
         left_bound = int(bounded_box_width / 2 - dimension / 2)
         right_bound = left_bound + dimension
         top_bound = int(bounded_box_height / 2 - dimension / 2)
         bottom_bound = top_bound + dimension
         croppedFrame = frame[top_bound:bottom_bound, left_bound:right_bound]  # x and y are flipped idk why
 
-
-        if time.time()-lastbox > 10:
+        if time.time()-lastbox > 60:
             lastbox = time.time()
             with torch.no_grad():
-                dataset_test = LocalizationDataset(Image.fromarray(frame))
+                dataset_test = LocalizationDataset(Image.fromarray(frame[capzone_top:capzone_bot, capzone_left:capzone_right]))
                 img, target = dataset_test[0]
                 prediction = local_model([img])
-                #print(prediction[0]['boxes'])
-                left_bounds = []
-                right_bounds = []
-                top_bounds = []
-                bottom_bounds = []
+                left_bounds.clear()
+                right_bounds.clear()
+                top_bounds.clear()
+                bottom_bounds.clear()
                 masks = prediction[0]['masks']
                 #Image.fromarray(prediction[0]['masks'][0,0].mul(255).byte().cpu().numpy()).show()
                 for boxes in prediction[0]['boxes']:
-                    left_bounds.append(boxes[0])
-                    right_bounds.append(boxes[2])
-                    top_bounds.append(boxes[1])
-                    bottom_bounds.append(boxes[3])
+                    if (boxes[2] - boxes[1]) > 5 and (boxes[3] - boxes[1]) > 5:
+                        left_bounds.append(boxes[0])
+                        right_bounds.append(boxes[2])
+                        top_bounds.append(boxes[1])
+                        bottom_bounds.append(boxes[3])
                     #print(boxes)
                     #frame = cv2.rectangle(frame, (boxes[0], boxes[1]), (boxes[2], boxes[3]), (0,255,0), thickness=2, lineType=8, shift=0)
-
         #print('{} to {} out of {}'.format(left_bound, right_bound, bounded_box_width))
         #print('{} to {} out of {}'.format(top_bound, bottom_bound, bounded_box_height))
 
         #frame = cv2.rectangle(frame,(left_bound,top_bound),(right_bound,bottom_bound),0,5,8,0)
-
+        frame = cv2.rectangle(frame, (capzone_left,capzone_top),(capzone_right,capzone_bot),(255,255,255),2,8,0)
+        #print('frame: {}'.format(frame.shape))
+        #print(len(left_bounds))
+        avg_box_left = 0
+        avg_box_right = 0
+        avg_box_top = 0
+        avg_box_bot = 0
         for boxes in range(len(left_bounds)):
-            frame = cv2.rectangle(frame, (left_bounds[boxes], top_bounds[boxes]), (right_bounds[boxes], bottom_bounds[boxes]), (0, 255, 0), thickness=2,
+            box_left = int(left_bounds[boxes]) + capzone_left
+            box_right = int(right_bounds[boxes]) + capzone_left #All shifted rigth by the amount of left bound
+            box_top = int(top_bounds[boxes]) + capzone_top
+            box_bot = int(bottom_bounds[boxes]) + capzone_top #All shifted down by the amount of top bound
+            avg_box_left = avg_box_left + box_left
+            avg_box_right = avg_box_right + box_right
+            avg_box_top = avg_box_top + box_top
+            avg_box_bot = avg_box_bot + box_bot
+            frame = cv2.rectangle(frame,
+                                  (box_left, box_top),
+                                  #(capzone_left, capzone_top),
+                                  (box_right, box_bot),
+                                  #(capzone_right, capzone_bot),
+                                  (0, 255, 0), thickness=2,
                                   lineType=8, shift=0)
+            #print('[{}:{}, {}:{}]'.format((box_top-100),(box_bot+100),(box_left-100),(box_right+100)))
+            #100's are just a general margin of error cuz the box fitting is pretty tight
+            #croppedFrame = frame[(box_top-100):(box_bot+100), (box_left-100):(box_right+100)] #x-y flipped
+        if len(left_bounds) > 0:
+            avg_box_left = avg_box_left / len(left_bounds)
+            avg_box_right = avg_box_right / len(left_bounds)
+            avg_box_top = avg_box_top / len(left_bounds)
+            avg_box_bot = avg_box_bot / len(left_bounds)
+            left = int((avg_box_right+avg_box_left) / 2 - dimension / 2)
+            right = left + dimension
+            top = int((avg_box_top+avg_box_bot) / 2 - dimension / 2)
+            bottom = top + dimension
+            croppedFrame = original[top:bottom, left:right]  # x and y are flipped idk why
+            print('{}:{}, {}:{}'.format(top, bottom, left, right))
+            frame = cv2.rectangle(frame, (left,top), (right, bottom), (255,0,0), thickness=2, lineType=8, shift=0)
+            #croppedFrame = frame[(box_top - 100):(box_bot + 100), (box_left - 100):(box_right + 100)]  # x-y flipped
+        else:
+            frame = cv2.rectangle(frame, (left_bound,top_bound), (right_bound, bottom_bound), (255,0,0), thickness=2, lineType=8, shift=0)
+            croppedFrame = original[top_bound:bottom_bound, left_bound:right_bound]  # x-y flipped
 
-
+        print(croppedFrame.shape)
         #Gets rid of the info on the bottom bar
         #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
         frame = cv2.putText(frame, sign, (10,30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
@@ -122,7 +164,6 @@ if __name__ == '__main__':
         if time.time()-last > 1:
             last = time.time()
             input = croppedFrame
-
             dataloader = DataLoader(TestDataset(input), batch_size=1, shuffle=False, num_workers=0)
             for i in dataloader:
                 outputs = model(i)

@@ -52,7 +52,7 @@ def create_data_set():
         transforms.ToTensor()
     ])
     dataset = ASLData(num_to_letter, list(range(87000)), transform=transformZ)
-    dataload = DataLoader(dataset, batch_size=8, shuffle=True, num_workers=4)
+    dataload = DataLoader(dataset, batch_size=8, shuffle=True, num_workers=0)
     return dataload, len(dataset)
 
 
@@ -63,5 +63,5 @@ def create_validation_set():
         transforms.ToTensor()
     ])
     dataset = ASLDataValidate(num_to_letter, list(range(len(num_to_letter)*4)), transform=transformZ)
-    dataload = DataLoader(dataset, batch_size=8, shuffle=True, num_workers=4)
+    dataload = DataLoader(dataset, batch_size=8, shuffle=True, num_workers=0)
     return dataload, len(dataset)
